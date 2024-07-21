@@ -3,24 +3,61 @@ package main
 import (
 	"flag"
 	"os"
-
+	"log"
 	"github.com/xtls/xray-core/main/commands/base"
 	_ "github.com/xtls/xray-core/main/distro/all"
+	"github.com/kardianos/service"
 )
 
-func main() {
-	os.Args = getArgsV4Compatible()
+type program struct{}
 
+func (p *program) Start(s service.Service) error {
+	go p.run()
+	return nil
+}
+
+func (p *program) run() {
+	os.Args = getArgsV4Compatible()
 	base.RootCommand.Long = "Xray is a platform for building proxies."
 	base.RootCommand.Commands = append(
 		[]*base.Command{
-			cmdRun,
-			cmdVersion,
+			{
+				UsageLine: "run",
+				Short:     "run the service",
+				Long:      "Run the Xray proxy service.",
+			},
+			{
+				UsageLine: "version",
+				Short:     "show version",
+				Long:      "Show the version of the Xray service.",
+			},
 		},
 		base.RootCommand.Commands...,
 	)
 	base.Execute()
 }
+
+func (p *program) Stop(s service.Service) error {
+	return nil
+}
+
+func main() {
+	svcConfig := &service.Config{
+		Name:        "XrayService",
+		DisplayName: "Xray Proxy Service",
+		Description: "This service manages the Xray proxy platform.",
+	}
+
+	prg := &program{}
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(os.Args) > 1 {
+		cmd := os.Args[1]
+		if cmd == "install" || cmd == "uninstall" || cmd == "start" || cmd == "stop" {
+			err = service.Control
 
 func getArgsV4Compatible() []string {
 	if len(os.Args) == 1 {
