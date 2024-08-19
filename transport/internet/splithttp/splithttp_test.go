@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	gotls "crypto/tls"
 	"fmt"
+	"io"
 	gonet "net"
 	"net/http"
 	"runtime"
@@ -60,7 +61,7 @@ func Test_listenSHAndDial(t *testing.T) {
 
 	var b [1024]byte
 	fmt.Println("test2")
-	n, _ := conn.Read(b[:])
+	n, _ := io.ReadFull(conn, b[:])
 	fmt.Println("string is", n)
 	if string(b[:n]) != "Response" {
 		t.Error("response: ", string(b[:n]))
@@ -72,7 +73,7 @@ func Test_listenSHAndDial(t *testing.T) {
 	common.Must(err)
 	_, err = conn.Write([]byte("Test connection 2"))
 	common.Must(err)
-	n, _ = conn.Read(b[:])
+	n, _ = io.ReadFull(conn, b[:])
 	common.Must(err)
 	if string(b[:n]) != "Response" {
 		t.Error("response: ", string(b[:n]))
@@ -116,7 +117,7 @@ func TestDialWithRemoteAddr(t *testing.T) {
 	common.Must(err)
 
 	var b [1024]byte
-	n, _ := conn.Read(b[:])
+	n, _ := io.ReadFull(conn, b[:])
 	if string(b[:n]) != "1.1.1.1:0" {
 		t.Error("response: ", string(b[:n]))
 	}
@@ -168,7 +169,7 @@ func Test_listenSHAndDial_TLS(t *testing.T) {
 	common.Must(err)
 
 	var b [1024]byte
-	n, _ := conn.Read(b[:])
+	n, _ := io.ReadFull(conn, b[:])
 	if string(b[:n]) != "Response" {
 		t.Error("response: ", string(b[:n]))
 	}
@@ -339,7 +340,7 @@ func Test_listenSHAndDial_Unix(t *testing.T) {
 
 	var b [1024]byte
 	fmt.Println("test2")
-	n, _ := conn.Read(b[:])
+	n, _ := io.ReadFull(conn, b[:])
 	fmt.Println("string is", n)
 	if string(b[:n]) != "Response" {
 		t.Error("response: ", string(b[:n]))
@@ -351,7 +352,7 @@ func Test_listenSHAndDial_Unix(t *testing.T) {
 	common.Must(err)
 	_, err = conn.Write([]byte("Test connection 2"))
 	common.Must(err)
-	n, _ = conn.Read(b[:])
+	n, _ = io.ReadFull(conn, b[:])
 	common.Must(err)
 	if string(b[:n]) != "Response" {
 		t.Error("response: ", string(b[:n]))
@@ -387,7 +388,7 @@ func Test_queryString(t *testing.T) {
 	ctx := context.Background()
 	streamSettings := &internet.MemoryStreamConfig{
 		ProtocolName:     "splithttp",
-		ProtocolSettings: &Config{Path: "sh"},
+		ProtocolSettings: &Config{Path: "sh?ed=2048"},
 	}
 	conn, err := Dial(ctx, net.TCPDestination(net.DomainAddress("localhost"), listenPort), streamSettings)
 
@@ -397,12 +398,66 @@ func Test_queryString(t *testing.T) {
 
 	var b [1024]byte
 	fmt.Println("test2")
-	n, _ := conn.Read(b[:])
+	n, _ := io.ReadFull(conn, b[:])
 	fmt.Println("string is", n)
 	if string(b[:n]) != "Response" {
 		t.Error("response: ", string(b[:n]))
 	}
 
 	common.Must(conn.Close())
+	common.Must(listen.Close())
+}
+
+func Test_maxUpload(t *testing.T) {
+	listenPort := tcp.PickPort()
+	streamSettings := &internet.MemoryStreamConfig{
+		ProtocolName: "splithttp",
+		ProtocolSettings: &Config{
+			Path: "/sh",
+			ScMaxEachPostBytes: &RandRangeConfig{
+				From: 100,
+				To:   100,
+			},
+		},
+	}
+
+	var uploadSize int
+	listen, err := ListenSH(context.Background(), net.LocalHostIP, listenPort, streamSettings, func(conn stat.Connection) {
+		go func(c stat.Connection) {
+			defer c.Close()
+			var b [1024]byte
+			c.SetReadDeadline(time.Now().Add(2 * time.Second))
+			n, err := c.Read(b[:])
+			if err != nil {
+				return
+			}
+
+			uploadSize = n
+
+			common.Must2(c.Write([]byte("Response")))
+		}(conn)
+	})
+	common.Must(err)
+	ctx := context.Background()
+
+	conn, err := Dial(ctx, net.TCPDestination(net.DomainAddress("localhost"), listenPort), streamSettings)
+
+	// send a slightly too large upload
+	var upload [101]byte
+	_, err = conn.Write(upload[:])
+	common.Must(err)
+
+	var b [1024]byte
+	n, _ := io.ReadFull(conn, b[:])
+	fmt.Println("string is", n)
+	if string(b[:n]) != "Response" {
+		t.Error("response: ", string(b[:n]))
+	}
+	common.Must(conn.Close())
+
+	if uploadSize > 100 || uploadSize == 0 {
+		t.Error("incorrect upload size: ", uploadSize)
+	}
+
 	common.Must(listen.Close())
 }
