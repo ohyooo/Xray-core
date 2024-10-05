@@ -474,6 +474,7 @@ type REALITYConfig struct {
 	Show         bool            `json:"show"`
 	MasterKeyLog string          `json:"masterKeyLog"`
 	Dest         json.RawMessage `json:"dest"`
+	Target       json.RawMessage `json:"target"`
 	Type         string          `json:"type"`
 	Xver         uint64          `json:"xver"`
 	ServerNames  []string        `json:"serverNames"`
@@ -495,6 +496,9 @@ func (c *REALITYConfig) Build() (proto.Message, error) {
 	config.Show = c.Show
 	config.MasterKeyLog = c.MasterKeyLog
 	var err error
+	if c.Dest == nil {
+		c.Dest = c.Target
+	}
 	if c.Dest != nil {
 		var i uint16
 		var s string
@@ -522,7 +526,7 @@ func (c *REALITYConfig) Build() (proto.Message, error) {
 			}
 		}
 		if c.Type == "" {
-			return nil, errors.New(`please fill in a valid value for "dest"`)
+			return nil, errors.New(`please fill in a valid value for "dest" or "target"`)
 		}
 		if c.Xver > 2 {
 			return nil, errors.New(`invalid PROXY protocol version, "xver" only accepts 0, 1, 2`)
@@ -644,13 +648,13 @@ type TransportProtocol string
 // Build implements Buildable.
 func (p TransportProtocol) Build() (string, error) {
 	switch strings.ToLower(string(p)) {
-	case "tcp":
+	case "raw", "tcp":
 		return "tcp", nil
 	case "kcp", "mkcp":
 		return "mkcp", nil
 	case "ws", "websocket":
 		return "websocket", nil
-	case "h2", "http":
+	case "h2", "h3", "http":
 		return "http", nil
 	case "grpc", "gun":
 		return "grpc", nil
@@ -783,6 +787,7 @@ type StreamConfig struct {
 	Security            string             `json:"security"`
 	TLSSettings         *TLSConfig         `json:"tlsSettings"`
 	REALITYSettings     *REALITYConfig     `json:"realitySettings"`
+	RAWSettings         *TCPConfig         `json:"rawSettings"`
 	TCPSettings         *TCPConfig         `json:"tcpSettings"`
 	KCPSettings         *KCPConfig         `json:"kcpSettings"`
 	WSSettings          *WebSocketConfig   `json:"wsSettings"`
@@ -839,10 +844,13 @@ func (c *StreamConfig) Build() (*internet.StreamConfig, error) {
 	default:
 		return nil, errors.New(`Unknown security "` + c.Security + `".`)
 	}
+	if c.TCPSettings == nil {
+		c.TCPSettings = c.RAWSettings
+	}
 	if c.TCPSettings != nil {
 		ts, err := c.TCPSettings.Build()
 		if err != nil {
-			return nil, errors.New("Failed to build TCP config.").Base(err)
+			return nil, errors.New("Failed to build RAW config.").Base(err)
 		}
 		config.TransportSettings = append(config.TransportSettings, &internet.TransportConfig{
 			ProtocolName: "tcp",
