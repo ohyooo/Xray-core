@@ -149,6 +149,7 @@ type WebSocketConfig struct {
 	Path                string            `json:"path"`
 	Headers             map[string]string `json:"headers"`
 	AcceptProxyProtocol bool              `json:"acceptProxyProtocol"`
+	HeartbeatPeriod     uint32            `json:"heartbeatPeriod"`
 }
 
 // Build implements Buildable.
@@ -178,6 +179,7 @@ func (c *WebSocketConfig) Build() (proto.Message, error) {
 		Header:              c.Headers,
 		AcceptProxyProtocol: c.AcceptProxyProtocol,
 		Ed:                  ed,
+		HeartbeatPeriod:     c.HeartbeatPeriod,
 	}
 	return config, nil
 }
@@ -236,6 +238,7 @@ type SplitHTTPConfig struct {
 	Mode                 string            `json:"mode"`
 	Extra                json.RawMessage   `json:"extra"`
 	NoGRPCHeader         bool              `json:"noGRPCHeader"`
+	KeepAlivePeriod      int64             `json:"keepAlivePeriod"`
 }
 
 type Xmux struct {
@@ -307,7 +310,7 @@ func (c *SplitHTTPConfig) Build() (proto.Message, error) {
 	switch c.Mode {
 	case "":
 		c.Mode = "auto"
-	case "auto", "packet-up", "stream-up":
+	case "auto", "packet-up", "stream-up", "stream-one":
 	default:
 		return nil, errors.New("unsupported mode: " + c.Mode)
 	}
@@ -324,9 +327,13 @@ func (c *SplitHTTPConfig) Build() (proto.Message, error) {
 		Xmux:                 &muxProtobuf,
 		Mode:                 c.Mode,
 		NoGRPCHeader:         c.NoGRPCHeader,
+		KeepAlivePeriod:      c.KeepAlivePeriod,
 	}
 	var err error
 	if c.DownloadSettings != nil {
+		if c.Mode == "stream-one" {
+			return nil, errors.New(`Can not use "downloadSettings" in "stream-one" mode.`)
+		}
 		if c.Extra != nil {
 			c.DownloadSettings.SocketSettings = nil
 		}
@@ -707,8 +714,10 @@ func (p TransportProtocol) Build() (string, error) {
 	case "ws", "websocket":
 		return "websocket", nil
 	case "h2", "h3", "http":
+		errors.PrintDeprecatedFeatureWarning("HTTP transport", "XHTTP transport")
 		return "http", nil
 	case "grpc":
+		errors.PrintMigrateFeatureInfo("gRPC transport", "XHTTP transport")
 		return "grpc", nil
 	case "httpupgrade":
 		return "httpupgrade", nil
