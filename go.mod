@@ -12,7 +12,7 @@ require (
 	github.com/miekg/dns v1.1.67
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pires/go-proxyproto v0.8.1
-	github.com/quic-go/quic-go v0.52.0
+	github.com/quic-go/quic-go v0.54.0
 	github.com/refraction-networking/utls v1.7.3
 	github.com/sagernet/sing v0.5.1
 	github.com/sagernet/sing-shadowsocks v0.2.7
@@ -20,10 +20,10 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/v2fly/ss-bloomring v0.0.0-20210312155135-28617310f63e
 	github.com/vishvananda/netlink v1.3.1
-	github.com/xtls/reality v0.0.0-20250608132114-50752aec6bfb
+	github.com/xtls/reality v0.0.0-20250715055725-05a351a64521
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	golang.org/x/crypto v0.40.0
-	golang.org/x/net v0.41.0
+	golang.org/x/net v0.42.0
 	golang.org/x/sync v0.16.0
 	golang.org/x/sys v0.34.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
@@ -38,13 +38,10 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 // indirect
-	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/pprof v0.0.0-20240528025155-186aa0362fba // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
-	github.com/onsi/ginkgo/v2 v2.19.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
