@@ -414,7 +414,8 @@ type TLSConfig struct {
 	VerifyPeerCertInNames                []string         `json:"verifyPeerCertInNames"`
 	ECHServerKeys                        string           `json:"echServerKeys"`
 	ECHConfigList                        string           `json:"echConfigList"`
-	ECHForceQuery                        bool             `json:"echForceQuery"`
+	ECHForceQuery                        string           `json:"echForceQuery"`
+	ECHSocketSettings                    *SocketConfig    `json:"echSockopt"`
 }
 
 // Build implements Buildable.
@@ -438,7 +439,7 @@ func (c *TLSConfig) Build() (proto.Message, error) {
 	}
 	if len(config.NextProtocol) > 1 {
 		for _, p := range config.NextProtocol {
-			if tcp.IsFromMitm(p) {
+			if tls.IsFromMitm(p) {
 				return nil, errors.New(`only one element is allowed in "alpn" when using "fromMitm" in it`)
 			}
 		}
@@ -493,8 +494,21 @@ func (c *TLSConfig) Build() (proto.Message, error) {
 		}
 		config.EchServerKeys = EchPrivateKey
 	}
+	switch c.ECHForceQuery {
+	case "none", "half", "full", "":
+		config.EchForceQuery = c.ECHForceQuery
+	default:
+		return nil, errors.New(`invalid "echForceQuery": `, c.ECHForceQuery)
+	}
 	config.EchForceQuery = c.ECHForceQuery
 	config.EchConfigList = c.ECHConfigList
+	if c.ECHSocketSettings != nil {
+		ss, err := c.ECHSocketSettings.Build()
+		if err != nil {
+			return nil, errors.New("Failed to build ech sockopt.").Base(err)
+		}
+		config.EchSocketSettings = ss
+	}
 
 	return config, nil
 }
