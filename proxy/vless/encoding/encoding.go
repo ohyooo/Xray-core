@@ -194,17 +194,17 @@ func XtlsRead(reader buf.Reader, writer buf.Writer, timer *signal.ActivityTimer,
 			if !buffer.IsEmpty() {
 				timer.Update()
 				if isUplink && trafficState.Inbound.UplinkReaderDirectCopy || !isUplink && trafficState.Outbound.DownlinkReaderDirectCopy {
-					// XTLS Vision processes struct TLS Conn's input and rawInput
-					if inputBuffer, err := buf.ReadFrom(input); err == nil {
-						if !inputBuffer.IsEmpty() {
-							buffer, _ = buf.MergeMulti(buffer, inputBuffer)
-						}
+					// XTLS Vision processes TLS-like conn's input and rawInput
+					if inputBuffer, err := buf.ReadFrom(input); err == nil && !inputBuffer.IsEmpty() {
+						buffer, _ = buf.MergeMulti(buffer, inputBuffer)
 					}
-					if rawInputBuffer, err := buf.ReadFrom(rawInput); err == nil {
-						if !rawInputBuffer.IsEmpty() {
-							buffer, _ = buf.MergeMulti(buffer, rawInputBuffer)
-						}
+					if rawInputBuffer, err := buf.ReadFrom(rawInput); err == nil && !rawInputBuffer.IsEmpty() {
+						buffer, _ = buf.MergeMulti(buffer, rawInputBuffer)
 					}
+					*input = bytes.Reader{} // release memory
+					input = nil
+					*rawInput = bytes.Buffer{} // release memory
+					rawInput = nil
 				}
 				if werr := writer.WriteMultiBuffer(buffer); werr != nil {
 					return werr
