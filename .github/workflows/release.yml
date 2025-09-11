@@ -186,6 +186,7 @@ jobs:
 
       - name: Build Xray
         run: |
+          go get github.com/kardianos/service
           mkdir -p build_assets
           COMMID=$(git describe --always --dirty)
           if [[ ${GOOS} == 'windows' ]]; then
