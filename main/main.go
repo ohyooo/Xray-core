@@ -6,9 +6,20 @@ import (
 
 	"github.com/xtls/xray-core/main/commands/base"
 	_ "github.com/xtls/xray-core/main/distro/all"
+	"github.com/kardianos/service"
+	"log"
 )
 
-func main() {
+type program struct{}
+
+func (p *program) Start(s service.Service) error {
+	// Start should not be blocking, so start a goroutine.
+	go p.run()
+	return nil
+}
+
+func (p *program) run() {
+	// Insert the main logic of Xray here
 	os.Args = getArgsV4Compatible()
 
 	base.RootCommand.Long = "Xray is a platform for building proxies."
