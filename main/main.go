@@ -33,6 +33,44 @@ func (p *program) run() {
 	base.Execute()
 }
 
+func (p *program) Stop(s service.Service) error {
+	// Perform any necessary stop operations
+	return nil
+}
+
+func main() {
+	svcConfig := &service.Config{
+		Name:        "XrayService",
+		DisplayName: "Xray Proxy Service",
+		Description: "This service manages the Xray proxy platform.",
+	}
+
+	prg := &program{}
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	logger, err := s.Logger(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Handle command-line instructions for the service, such as "install", "uninstall", "start", "stop"
+	if len(os.Args) > 1 {
+		cmd := os.Args[1]
+		switch cmd {
+		case "install", "uninstall", "start", "stop":
+			service.Control(s, cmd)
+			return
+		}
+	}
+
+	if err := s.Run(); err != nil {
+		logger.Error(err)
+	}
+}
+
 func getArgsV4Compatible() []string {
 	if len(os.Args) == 1 {
 		return []string{os.Args[0], "run"}
